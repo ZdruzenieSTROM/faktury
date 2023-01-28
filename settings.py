@@ -1,0 +1,2 @@
+API_KEY = None
+STROM_ID = 2839
