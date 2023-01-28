@@ -1,2 +1,7 @@
 .secrets/*
 !.secrets/.gitkeep
+
+output/*
+!output/.gitkeep
+input/*
+!input/.gitkeep
