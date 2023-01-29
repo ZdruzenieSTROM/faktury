@@ -4,6 +4,6 @@ datum_vystavenia: 1.1.2023
 datum_splatnosti: 1.1.2023
 polozky:
   ucastnicky:
-    p_text: Účastnícky poplatok, sústredenie STROM v termíne 29.1.-3.2.2023 za účastníka {i_ucastnik_name}, dátum narodenia {i_datum_narodenia}
-    p_unit: ks
-    p_price: 120
+    nazov_polozky: Účastnícky poplatok, sústredenie STROM v termíne 29.1.-3.2.2023 za účastníka {i_ucastnik_name}, dátum narodenia {i_datum_narodenia}
+    jednotka: ks
+    cena: 120
