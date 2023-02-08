@@ -31,7 +31,7 @@ def vytvor(name,debug,download):
         if download:
             api_session.download_invoice(invoice_record.kod_faktury)
     
-    with open(os.path.join('outputs',f'{name}.csv'), 'w',encoding='utf-8') as csvfile:
+    with open(os.path.join('output',f'{name}.csv'), 'w',encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=InvoiceRecord.__dataclass_fields__.keys(),delimiter=';')
         writer.writeheader()
         writer.writerows(asdict(customer) for customer in output)

@@ -5,3 +5,5 @@ output/*
 !output/.gitkeep
 input/*
 !input/.gitkeep
+
+*.pyc
