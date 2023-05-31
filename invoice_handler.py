@@ -182,7 +182,7 @@ class InvoiceSession:
 
         return InvoiceRecord(
             cislo_faktury=number,
-            odberatel=f'{customer["o_name"]}, {customer["o_street"]}, {customer["o_zip"]} {customer["o_city"]}',
+            odberatel=f'{customer.get("o_name","")}, {customer.get("o_street","")}, {customer.get("o_zip","")} {customer.get("o_city","")}',
             datum_dodania=invoice_set.date_delivery,
             datum_vystavenia=invoice_set.date_issue,
             datum_splatnosti=invoice_set.date_due,

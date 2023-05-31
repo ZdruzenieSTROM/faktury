@@ -34,7 +34,8 @@ def vytvor(name,debug,download):
     with open(os.path.join('output',f'{name}.csv'), 'w',encoding='utf-8') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=InvoiceRecord.__dataclass_fields__.keys(),delimiter=';')
         writer.writeheader()
-        writer.writerow(asdict(customer) for customer in output)
+        for customer in output:
+            writer.writerow(asdict(customer) )
     click.echo(click.style('V outputs je vystup',fg='green'))
     
 
