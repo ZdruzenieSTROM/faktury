@@ -44,9 +44,9 @@ Pre zakladanie faktúr je potrebné taktiež pridať file s názvom `api_key` do
 ### Spustenie
 Pre vytvorenie faktúry použi príkaz
 ```
-python cli.py skontroluj sustredenie
+python faktury.py skontroluj sustredenie
 ```
 
 ```
-python cli.py vytvor sustredenie
+python faktury.py vytvor sustredenie
 ```
