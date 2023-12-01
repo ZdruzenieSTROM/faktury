@@ -1,6 +1,5 @@
 import csv
 import json
-from urllib.parse import urlencode
 from datetime import date
 import requests
 from dataclasses import dataclass
@@ -57,7 +56,7 @@ class InvoiceSet:
             raise InvoiceSetValidationError('Dátum splatnosti nebol vyplnený')
         if self.date_delivery is None:
             raise InvoiceSetValidationError('Dátum dodania nebol vyplnený')
-        if self.date_issue>self.date_due:
+        if self.date_issue<=self.date_due:
             raise InvoiceSetValidationError('Dátum vystavenia je neskorší ako dátum splatnosti')
         for customer in self.customers:
             self.validate_customer(customer)
@@ -123,7 +122,7 @@ class InvoiceSession:
     def download_invoice(self, code):
         return self.__send_request(
             'detail-subor',
-            params={'f': code}
+            data={'f': code}
         ).content
 
     def get_invoice(self, code):
