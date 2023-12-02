@@ -3,61 +3,67 @@ import json
 from datetime import date
 import requests
 from dataclasses import dataclass
-from typing import List,Dict
+from typing import List, Dict
 from decimal import Decimal
 import os
 import yaml
 
 
-from settings import API_KEY,STROM_ID
+from settings import API_KEY, STROM_ID
+
 
 @dataclass(frozen=True)
 class InvoiceItem:
-    nazov_polozky:str
-    jednotka:str
-    cena:Decimal
+    nazov_polozky: str
+    jednotka: str
+    cena: Decimal
+
 
 @dataclass(frozen=True)
 class InvoiceRecord:
-    cislo_faktury:str
-    odberatel:str
-    datum_vystavenia:str
-    datum_dodania:str
-    datum_splatnosti:str
-    predmet:str
+    cislo_faktury: str
+    odberatel: str
+    datum_vystavenia: str
+    datum_dodania: str
+    datum_splatnosti: str
+    predmet: str
     suma: Decimal
-    datum_uhrady:str
-    kod_faktury:str
+    datum_uhrady: str
+    kod_faktury: str
+
 
 class InvoiceSetValidationError(Exception):
     """Invalid invoice set"""
 
+
 @dataclass(frozen=True)
 class InvoiceSet:
-    issuer:str
-    date_delivery:str
-    date_issue:str
-    date_due:str
-    invoice_items: Dict[str,InvoiceItem]
-    customers:List[dict]
+    issuer: str
+    date_delivery: str
+    date_issue: str
+    date_due: str
+    invoice_items: Dict[str, InvoiceItem]
+    customers: List[dict]
 
-    def validate_customer(self,customer:dict):
+    def validate_customer(self, customer: dict):
         if 'o_name' not in customer:
             raise InvoiceSetValidationError('Zákazník nemá vyplnené meno')
         name = customer['o_name']
         if 'f_paid' in customer and ('i_date_paid' not in customer or customer['i_date_paid'] is None):
-            raise InvoiceSetValidationError(f'Faktúra pre {name} bola označená ako uhradená ale nemá vyplnený dátum zaplatenia v stĺpci i_date_paid')
-        if 'i_date_paid' in customer and customer['i_date_paid'] is not None and customer['i_date_paid']>self.date_issue:
-            raise InvoiceSetValidationError(f'Faktúra pre {name} má dátum úhrady i_date_paid neskorší ako dátum vystavenia')
-
+            raise InvoiceSetValidationError(
+                f'Faktúra pre {name} bola označená ako uhradená ale nemá vyplnený dátum zaplatenia v stĺpci i_date_paid')
+        if 'i_date_paid' in customer and customer['i_date_paid'] is not None and customer['i_date_paid'] > self.date_issue:
+            raise InvoiceSetValidationError(
+                f'Faktúra pre {name} má dátum úhrady i_date_paid neskorší ako dátum vystavenia')
 
     def validate(self):
         if self.date_due is None:
             raise InvoiceSetValidationError('Dátum splatnosti nebol vyplnený')
         if self.date_delivery is None:
             raise InvoiceSetValidationError('Dátum dodania nebol vyplnený')
-        if self.date_issue<=self.date_due:
-            raise InvoiceSetValidationError('Dátum vystavenia je neskorší ako dátum splatnosti')
+        if self.date_issue <= self.date_due:
+            raise InvoiceSetValidationError(
+                'Dátum vystavenia je neskorší ako dátum splatnosti')
         for customer in self.customers:
             self.validate_customer(customer)
 
@@ -72,35 +78,37 @@ class InvoiceSet:
         return customers
 
     @staticmethod
-    def from_files(event_name:str):
-        customer_file = os.path.join('input',f'{event_name}.csv')
-        settings_file = os.path.join('input',f'{event_name}.yaml')
+    def from_files(event_name: str):
+        customer_file = os.path.join('input', f'{event_name}.csv')
+        settings_file = os.path.join('input', f'{event_name}.yaml')
         if not os.path.exists(customer_file):
-            raise InvoiceSetValidationError(f'Súbor so zoznamom zákazníkov ({customer_file}) neexistuje')
+            raise InvoiceSetValidationError(
+                f'Súbor so zoznamom zákazníkov ({customer_file}) neexistuje')
         if not os.path.exists(settings_file):
-            raise InvoiceSetValidationError(f'Súbor s nastaveniami ({settings_file}) neexistuje')
+            raise InvoiceSetValidationError(
+                f'Súbor s nastaveniami ({settings_file}) neexistuje')
         customers = InvoiceSet.load_customers(customer_file)
-        with open(settings_file,encoding='utf-8') as settings_stream:
-            settings_dict = yaml.load(settings_stream,yaml.Loader)
-        
+        with open(settings_file, encoding='utf-8') as settings_stream:
+            settings_dict = yaml.load(settings_stream, yaml.Loader)
+
         return InvoiceSet(
             issuer=settings_dict.get('vystavil'),
             date_delivery=settings_dict.get('datum_dodania'),
-            date_issue=settings_dict.get('datum_vystavenia',date.today()),
+            date_issue=settings_dict.get('datum_vystavenia', date.today()),
             date_due=settings_dict.get('datum_splatnosti'),
-            invoice_items={item_name: InvoiceItem(**item_specs) for item_name,item_specs in settings_dict.get('polozky',{}).items()},
+            invoice_items={item_name: InvoiceItem(
+                **item_specs) for item_name, item_specs in settings_dict.get('polozky', {}).items()},
             customers=customers
-            
-            )
-        
+
+        )
+
 
 class InvoiceSession:
 
-    def __init__(self,debug=False):
+    def __init__(self, debug=False):
         self.session = requests.Session()
         self.debug = debug
         self.__send_request('init', {})
-        
 
     def __send_request(self, method: str, data: dict):
         """Request to Faktury"""
@@ -130,24 +138,24 @@ class InvoiceSession:
         response = self.session.get(invoice_url)
         return response.content
 
-    def create_invoice(self, customer: Dict[str, str], invoice_set:InvoiceSet)->InvoiceRecord:
+    def create_invoice(self, customer: Dict[str, str], invoice_set: InvoiceSet) -> InvoiceRecord:
         # Sort customer properties
         info = {key: value for key, value in customer.items()
-             if key.startswith('i_')}
+                if key.startswith('i_')}
         faktura = {key: value for key,
-                       value in customer.items() if key.startswith('f_')}
-        items = [(invoice_set.invoice_items[key], value) 
+                   value in customer.items() if key.startswith('f_')}
+        items = [(invoice_set.invoice_items[key], value)
                  for key, value in customer.items()
                  if key in invoice_set.invoice_items]
-        
+
         # Compile items
         items_compiled = []
         total_price = 0
-        
+
         for item, quantity in items:
             if quantity == 0 or quantity == '0':
                 continue
-            
+
             items_compiled.append(
                 {
                     'p_text': item.nazov_polozky.format(**info),
@@ -156,7 +164,7 @@ class InvoiceSession:
                     'p_quantity': quantity
                 }
             )
-            total_price+=Decimal(quantity)*Decimal(item.cena)
+            total_price += Decimal(quantity)*Decimal(item.cena)
 
         # Send request
         response = self.__send_request(
@@ -164,7 +172,7 @@ class InvoiceSession:
             {
                 'd': {'d_id': STROM_ID},
                 'o': {key: value for key, value in customer.items()
-             if key.startswith('o_')},
+                      if key.startswith('o_')},
                 'f': {
                     'f_date_issue': invoice_set.date_issue,
                     'f_date_delivery': invoice_set.date_delivery,
@@ -185,19 +193,30 @@ class InvoiceSession:
             datum_dodania=invoice_set.date_delivery,
             datum_vystavenia=invoice_set.date_issue,
             datum_splatnosti=invoice_set.date_due,
-            predmet=items.keys()[0].nazov_polozky.format(**info) if len(items)==0 else '',
+            predmet=items.keys()[0].nazov_polozky.format(
+                **info) if len(items) == 0 else '',
             suma=total_price,
             kod_faktury=code,
-            datum_uhrady=customer.get('i_date_paid','')
+            datum_uhrady=customer.get('i_date_paid', '')
         )
 
-
-
-
-
-
-
-
+    def list_invoices(self, from_date, to_date):
+        def get_file_name(from_date, to_date):
+            return f'output/export_dennik_{from_date}_{to_date}'
+        response = self.__send_request(
+            method='list/issued',
+            data={
+                'from': from_date,
+                'to': to_date
+            }
+        )
+        invoices = response.json()
+        with open(get_file_name(from_date, to_date), 'r', encoding='utf-8') as export_file:
+            writer = csv.DictWriter()
+            for invoice in invoices:
+                {
+                    'Dátum vystavenia': invoice['invoice_date_issue']
+                }
 
 
 # def create_invoice(session, customer: dict):
@@ -241,12 +260,6 @@ class InvoiceSession:
 #     print(response.json())
 #     code = response.json()['code']
 #     return code
-
-
-
-
-
-
 
 
 # session = init_session()

@@ -55,7 +55,16 @@ def skontroluj(name):
         click.echo(click.style(str(error), fg='red'), err=True)
 
 
+@click.command()
+@click.argument('from_date')
+@click.argument('to_date')
+def dennik(from_date, to_date):
+    session = InvoiceSession()
+    session.list_invoices(from_date, to_date)
+
+
 cli.add_command(vytvor)
 cli.add_command(skontroluj)
+cli.add_command(dennik)
 if __name__ == '__main__':
     cli()
