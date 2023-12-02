@@ -212,7 +212,7 @@ class InvoiceSession:
         )
         invoices = response.json()
         with open(get_file_name(from_date, to_date), 'r', encoding='utf-8') as export_file:
-            writer = csv.DictWriter()
+            writer = csv.DictWriter(export_file)
             for invoice in invoices:
                 {
                     'Dátum vystavenia': invoice['invoice_date_issue']
