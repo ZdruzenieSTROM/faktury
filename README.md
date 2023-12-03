@@ -50,3 +50,8 @@ python faktury.py skontroluj sustredenie
 ```
 python faktury.py vytvor sustredenie
 ```
+
+Generovanie výstupu do denníka
+```
+python faktury.py dennik 2023-01-01 2023-01-31
+```
