@@ -210,9 +210,13 @@ class InvoiceSession:
         )
         return response.json()
 
-    def list_invoices(self, from_date, to_date):
+    def list_invoices(self, from_date, to_date) -> List[dict]:
         def get_file_name(from_date, to_date):
             return f'output/export_dennik_{from_date}_{to_date}.csv'
+
+        def localize_date(date_: str) -> str:
+            year, month, day = date_.split('-')
+            return f'{day}.{month}.{year}'
 
         def invoice_to_dict(invoice):
             invoice_detail = self.get_invoice_detail(invoice['code'])
@@ -222,12 +226,12 @@ class InvoiceSession:
                 'Poradové číslo': int(invoice['invoice_number'][:3]),
                 'Číslo faktúry': invoice['invoice_number'],
                 'Odberateľ': f"{invoice['customer']}, {invoice_detail['customer_street']}, {invoice_detail['customer_zip']} {invoice_detail['customer_city']}",
-                'Dátum vystavenia': invoice['invoice_date_issue'],
-                'Dátum dodania': invoice['invoice_date_delivery'],
-                'Dátum splatnosti': invoice['invoice_date_due'],
+                'Dátum vystavenia': localize_date(invoice['invoice_date_issue']),
+                'Dátum dodania': localize_date(invoice['invoice_date_delivery']),
+                'Dátum splatnosti': localize_date(invoice['invoice_date_due']),
                 'Predmet': subject,
                 'Suma': invoice['invoice_amount'],
-                'Dátum úhrady': ''
+                'Dátum úhrady': '' if invoice_detail['invoice_paid'] == 'nie' else invoice_detail['invoice_paid']
             }
 
         response = self.__send_request(
@@ -238,10 +242,9 @@ class InvoiceSession:
             }
         )
         invoices = response.json()['invoices']
-        invoices_with_detail = map(invoice_to_dict, invoices)
-        print(invoices_with_detail)
+        # TODO: Move to CLI, this does not belong here
         with open(get_file_name(from_date, to_date), 'w', newline='', encoding='utf-8') as export_file:
             writer = csv.DictWriter(export_file,
                                     fieldnames=['Poradové číslo', 'Číslo faktúry', 'Odberateľ', 'Dátum vystavenia', 'Dátum dodania', 'Dátum splatnosti', 'Predmet', 'Suma', 'Dátum úhrady'])
-
-            writer.writerows(invoices_with_detail)
+            for invoice in tqdm.tqdm(invoices):
+                writer.writerow(invoice_to_dict(invoice))
