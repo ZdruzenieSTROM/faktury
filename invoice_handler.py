@@ -7,7 +7,8 @@ from typing import List, Dict
 from decimal import Decimal
 import os
 import yaml
-
+import tqdm
+from multiprocessing import Pool
 
 from settings import API_KEY, STROM_ID
 
@@ -200,9 +201,35 @@ class InvoiceSession:
             datum_uhrady=customer.get('i_date_paid', '')
         )
 
+    def get_invoice_detail(self, code: str):
+        response = self.__send_request(
+            method='status',
+            data={
+                'code': code
+            }
+        )
+        return response.json()
+
     def list_invoices(self, from_date, to_date):
         def get_file_name(from_date, to_date):
-            return f'output/export_dennik_{from_date}_{to_date}'
+            return f'output/export_dennik_{from_date}_{to_date}.csv'
+
+        def invoice_to_dict(invoice):
+            invoice_detail = self.get_invoice_detail(invoice['code'])
+            subject = ','.join(item['item_name']
+                               for item in invoice_detail['items'])
+            return {
+                'Poradové číslo': int(invoice['invoice_number'][:3]),
+                'Číslo faktúry': invoice['invoice_number'],
+                'Odberateľ': f"{invoice['customer']}, {invoice_detail['customer_street']}, {invoice_detail['customer_zip']} {invoice_detail['customer_city']}",
+                'Dátum vystavenia': invoice['invoice_date_issue'],
+                'Dátum dodania': invoice['invoice_date_delivery'],
+                'Dátum splatnosti': invoice['invoice_date_due'],
+                'Predmet': subject,
+                'Suma': invoice['invoice_amount'],
+                'Dátum úhrady': ''
+            }
+
         response = self.__send_request(
             method='list/issued',
             data={
@@ -210,63 +237,11 @@ class InvoiceSession:
                 'to': to_date
             }
         )
-        invoices = response.json()
-        with open(get_file_name(from_date, to_date), 'r', encoding='utf-8') as export_file:
-            writer = csv.DictWriter(export_file)
-            for invoice in invoices:
-                {
-                    'Dátum vystavenia': invoice['invoice_date_issue']
-                }
+        invoices = response.json()['invoices']
+        invoices_with_detail = map(invoice_to_dict, invoices)
+        print(invoices_with_detail)
+        with open(get_file_name(from_date, to_date), 'w', newline='', encoding='utf-8') as export_file:
+            writer = csv.DictWriter(export_file,
+                                    fieldnames=['Poradové číslo', 'Číslo faktúry', 'Odberateľ', 'Dátum vystavenia', 'Dátum dodania', 'Dátum splatnosti', 'Predmet', 'Suma', 'Dátum úhrady'])
 
-
-# def create_invoice(session, customer: dict):
-#     info = {key: value for key, value in customer.items()
-#             if key.startswith('i_')}
-#     faktura = {key: value for key,
-#                       value in customer.items() if key.startswith('f_')}
-#     items = {key: value for key, value in customer.items()
-#              if key in settings.POLOZKY}
-#     items_compiled = []
-#     for item_code, quantity in items.items():
-#         if quantity == 0 or quantity == '0':
-#             continue
-#         print(info)
-#         items_compiled.append(
-#             {
-#                 'p_text': settings.POLOZKY[item_code]['p_text'].format(**info),
-#                 'p_unit': settings.POLOZKY[item_code]['p_unit'],
-#                 'p_price': settings.POLOZKY[item_code]['p_price'],
-#                 'p_quantity': quantity
-#             }
-#         )
-#     response = faktury_request(
-#         session,
-#         'nf',
-#         {
-#             'd': {'d_id': STROM_ID},
-#             'o': {key: value for key, value in customer.items() if key.startswith('o_')},
-#             'f': dict(
-#                 f_date_issue=settings.DATUM_VYSTAVENIA,
-#                 f_date_delivery=settings.DATUM_DODANIA,
-#                 f_date_due=settings.DATUM_SPLATNOSTI,
-#                 f_issued_by=settings.ISSUED_BY,
-#                 **faktura
-#             ),
-#             'p': items_compiled
-
-#         }
-
-#     )
-#     print(response.json())
-#     code = response.json()['code']
-#     return code
-
-
-# session = init_session()
-# # create_empty_template('template.csv')
-# # quit()
-# customers = load_customers('faktury-stromzima2023.csv')
-# print(customers)
-# for customer in customers:
-#     code = create_invoice(session, customer)
-#     print(faktury_request(session, 'zf', {'code': code}).json())
+            writer.writerows(invoices_with_detail)
