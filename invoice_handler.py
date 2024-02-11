@@ -37,6 +37,11 @@ class InvoiceSetValidationError(Exception):
     """Invalid invoice set"""
 
 
+def as_date(date_: str):
+    day, month, year = date_.split('.')
+    return date(year=int(year), month=int(month), day=int(day))
+
+
 @dataclass(frozen=True)
 class InvoiceSet:
     issuer: str
@@ -53,7 +58,7 @@ class InvoiceSet:
         if 'f_paid' in customer and ('i_date_paid' not in customer or customer['i_date_paid'] is None):
             raise InvoiceSetValidationError(
                 f'Faktúra pre {name} bola označená ako uhradená ale nemá vyplnený dátum zaplatenia v stĺpci i_date_paid')
-        if 'i_date_paid' in customer and customer['i_date_paid'] is not None and customer['i_date_paid'] > self.date_issue:
+        if 'i_date_paid' in customer and customer['i_date_paid'] is not None and as_date(customer['i_date_paid']) > as_date(self.date_issue):
             raise InvoiceSetValidationError(
                 f'Faktúra pre {name} má dátum úhrady i_date_paid neskorší ako dátum vystavenia')
 
@@ -62,7 +67,7 @@ class InvoiceSet:
             raise InvoiceSetValidationError('Dátum splatnosti nebol vyplnený')
         if self.date_delivery is None:
             raise InvoiceSetValidationError('Dátum dodania nebol vyplnený')
-        if self.date_issue < self.date_due:
+        if as_date(self.date_issue) < as_date(self.date_due):
             raise InvoiceSetValidationError(
                 'Dátum vystavenia je neskorší ako dátum splatnosti')
         for customer in self.customers:
