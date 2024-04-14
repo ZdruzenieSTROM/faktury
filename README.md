@@ -39,7 +39,7 @@ Pre spustenie treba najprv nainštalovať dependencie:
 ```
 pip install -r requirements.txt
 ```
-Pre zakladanie faktúr je potrebné taktiež pridať file s názvom `api_key` do priečinka `.secrets`. Do tohto súboru skopíruj API kľúč z nášho konta na faktury-online.com
+Pre zakladanie faktúr je potrebné taktiež pridať file s názvom `api_key.txt` do priečinka `.secrets`. Do tohto súboru skopíruj API kľúč z nášho konta na faktury-online.com
 
 ### Spustenie
 Pre vytvorenie faktúry použi príkaz
