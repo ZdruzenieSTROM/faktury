@@ -67,7 +67,7 @@ class InvoiceSet:
             raise InvoiceSetValidationError('Dátum splatnosti nebol vyplnený')
         if self.date_delivery is None:
             raise InvoiceSetValidationError('Dátum dodania nebol vyplnený')
-        if as_date(self.date_issue) < as_date(self.date_due):
+        if as_date(self.date_issue) > as_date(self.date_due):
             raise InvoiceSetValidationError(
                 'Dátum vystavenia je neskorší ako dátum splatnosti')
         for customer in self.customers:
