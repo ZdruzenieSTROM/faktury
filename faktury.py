@@ -67,4 +67,5 @@ cli.add_command(vytvor)
 cli.add_command(skontroluj)
 cli.add_command(dennik)
 if __name__ == '__main__':
+    click.echo(click.style('** STROMácke faktúry **', fg='white'), err=True)
     cli()
