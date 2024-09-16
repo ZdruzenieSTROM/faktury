@@ -19,6 +19,7 @@ Popis možných stĺpcov:
  - `o_dic` - DIČ v prípade firmy. Ak sa jedná o rodiča/ účastníka ostáva prázdne.
  - `o_icdph` - 
  - `o_email` - Email (nepovinné)
+ - `ucastnicky` - pocet kusov, kolkokrat danu vec uhradzaju (1)
  - `f_paid` - Suma, ktorá už bola uhradená
  - `i_date_paid` - Dátum úhrady. Je potrebné vyplniť iba ak bolo niečo vyplnené v `f_paid`.
  - `f_payment` - Možné hodnoty: `hotovost`,`prevod`,`karta`. Ak nie je uvedené, defaultne sa použije `prevod`
