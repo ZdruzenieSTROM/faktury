@@ -5,10 +5,12 @@ import requests
 from dataclasses import dataclass
 from typing import List, Dict
 from decimal import Decimal
+from collections import defaultdict
 import os
 import yaml
 import tqdm
 from multiprocessing import Pool
+from enum import Enum
 
 from settings import API_KEY, STROM_ID
 
@@ -107,6 +109,12 @@ class InvoiceSet:
             customers=customers
 
         )
+
+
+class InvoiceType(str, Enum):
+    FAKTURA = ''
+    DOBROPIS = 'DOB'
+    ZAHRANICNA_FAKTURA = 'ZF'
 
 
 class InvoiceSession:
@@ -215,20 +223,29 @@ class InvoiceSession:
         )
         return response.json()
 
-    def list_invoices(self, from_date, to_date) -> List[dict]:
-        def get_file_name(from_date, to_date):
-            return f'output/export_dennik_{from_date}_{to_date}.csv'
+    def list_invoices(self, from_date: str, to_date: str) -> List[dict]:
+        def get_file_name(invoice_type: InvoiceType, from_date, to_date):
+            return f'output/export_dennik_{invoice_type.value}_{from_date}_{to_date}.csv'
 
         def localize_date(date_: str) -> str:
             year, month, day = date_.split('-')
             return f'{day}.{month}.{year}'
 
+        def extract_type_and_number(invoice_number: str):
+            if invoice_number.startswith('ZF'):
+                return InvoiceType.ZAHRANICNA_FAKTURA, int(invoice_number[2:5])
+            if invoice_number.startswith('DOB'):
+                return InvoiceType.DOBROPIS, int(invoice_number[3:6])
+            return InvoiceType.FAKTURA, int(invoice_number[:3])
+
         def invoice_to_dict(invoice):
             invoice_detail = self.get_invoice_detail(invoice['code'])
             subject = ','.join(item['item_name']
                                for item in invoice_detail['items'])
-            return {
-                'Poradové číslo': int(invoice['invoice_number'][:3]),
+            invoice_type, invoice_number = extract_type_and_number(
+                invoice['invoice_number'])
+            return invoice_type, {
+                'Poradové číslo': invoice_number,
                 'Číslo faktúry': invoice['invoice_number'],
                 'Odberateľ': f"{invoice['customer']}, {invoice_detail['customer_street']}, {invoice_detail['customer_zip']} {invoice_detail['customer_city']}",
                 'Dátum vystavenia': localize_date(invoice['invoice_date_issue']),
@@ -248,8 +265,12 @@ class InvoiceSession:
         )
         invoices = response.json()['invoices']
         # TODO: Move to CLI, this does not belong here
-        with open(get_file_name(from_date, to_date), 'w', newline='', encoding='utf-8') as export_file:
-            writer = csv.DictWriter(export_file,
-                                    fieldnames=['Poradové číslo', 'Číslo faktúry', 'Odberateľ', 'Dátum vystavenia', 'Dátum dodania', 'Dátum splatnosti', 'Predmet', 'Suma', 'Dátum úhrady'])
-            for invoice in tqdm.tqdm(invoices):
-                writer.writerow(invoice_to_dict(invoice))
+        files = defaultdict(lambda: [])
+        for invoice in tqdm.tqdm(invoices):
+            inovice_type, record = invoice_to_dict(invoice)
+            files[inovice_type].append(record)
+        for invoice_type, records in files.items():
+            with open(get_file_name(invoice_type, from_date, to_date), 'w', newline='', encoding='utf-8') as export_file:
+                writer = csv.DictWriter(export_file,
+                                        fieldnames=['Poradové číslo', 'Číslo faktúry', 'Odberateľ', 'Dátum vystavenia', 'Dátum dodania', 'Dátum splatnosti', 'Predmet', 'Suma', 'Dátum úhrady'])
+                writer.writerows(records)
