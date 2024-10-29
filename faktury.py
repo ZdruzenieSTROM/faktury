@@ -1,7 +1,7 @@
 import click
 from invoice_handler import InvoiceSet, InvoiceSetValidationError, InvoiceSession, InvoiceRecord
 import csv
-from dataclasses import fields, asdict
+from dataclasses import asdict
 import os
 
 
@@ -16,7 +16,6 @@ def cli():
 @click.option('--download', is_flag=True)
 def vytvor(name, debug, download):
     invoice_set = InvoiceSet.from_files(name)
-    print(debug)
     api_session = InvoiceSession(debug=debug)
 
     output = []

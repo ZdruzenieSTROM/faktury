@@ -3,7 +3,7 @@ import json
 from datetime import date
 import requests
 from dataclasses import dataclass
-from typing import List, Dict
+from typing import List, Dict, Optional
 from decimal import Decimal
 from collections import defaultdict
 import os
@@ -13,6 +13,8 @@ from multiprocessing import Pool
 from enum import Enum
 
 from settings import API_KEY, STROM_ID
+
+from pprint import pprint
 
 
 @dataclass(frozen=True)
@@ -44,6 +46,14 @@ def as_date(date_: str):
     return date(year=int(year), month=int(month), day=int(day))
 
 
+INVOICE_TYPES = {
+    'faktura': 1,
+    'zalohova': 2,
+    'dobropis': 3,
+    'tarchopis': 4
+}
+
+
 @dataclass(frozen=True)
 class InvoiceSet:
     issuer: str
@@ -52,6 +62,9 @@ class InvoiceSet:
     date_due: str
     invoice_items: Dict[str, InvoiceItem]
     customers: List[dict]
+    invoice_type: int = 1
+    tags: Optional[List[str]] = None
+    note: Optional[str] = None
 
     def validate_customer(self, customer: dict):
         if 'o_name' not in customer:
@@ -104,6 +117,10 @@ class InvoiceSet:
             date_delivery=settings_dict.get('datum_dodania'),
             date_issue=settings_dict.get('datum_vystavenia', date.today()),
             date_due=settings_dict.get('datum_splatnosti'),
+            invoice_type=INVOICE_TYPES.get(
+                settings_dict.get('typ', 'faktura')),
+            note=settings_dict.get('poznamka'),
+            tags=settings_dict.get('tagy'),
             invoice_items={item_name: InvoiceItem(
                 **item_specs) for item_name, item_specs in settings_dict.get('polozky', {}).items()},
             customers=customers
@@ -115,6 +132,7 @@ class InvoiceType(str, Enum):
     FAKTURA = ''
     DOBROPIS = 'DOB'
     ZAHRANICNA_FAKTURA = 'ZF'
+    TARCHOPIS = 'T'
 
 
 class InvoiceSession:
@@ -126,6 +144,9 @@ class InvoiceSession:
 
     def __send_request(self, method: str, data: dict):
         """Request to Faktury"""
+        if self.debug:
+            pprint('Request data')
+            pprint(data)
         return self.session.get(
             f'https://www.faktury-online.com/api/{method}',
             params={
@@ -158,6 +179,10 @@ class InvoiceSession:
                 if key.startswith('i_')}
         faktura = {key: value for key,
                    value in customer.items() if key.startswith('f_')}
+        if invoice_set.note:
+            faktura['f_note_above'] = invoice_set.note
+        if invoice_set.tags and len(invoice_set.tags):
+            faktura['f_tags'] = invoice_set.tags
         items = [(invoice_set.invoice_items[key], value)
                  for key, value in customer.items()
                  if key in invoice_set.invoice_items]
@@ -192,6 +217,7 @@ class InvoiceSession:
                     'f_date_delivery': invoice_set.date_delivery,
                     'f_date_due': invoice_set.date_due,
                     'f_issued_by': invoice_set.issuer,
+                    'f_type': invoice_set.invoice_type,
                     **faktura
                 },
                 'p': items_compiled
@@ -236,6 +262,8 @@ class InvoiceSession:
                 return InvoiceType.ZAHRANICNA_FAKTURA, int(invoice_number[2:5])
             if invoice_number.startswith('DOB'):
                 return InvoiceType.DOBROPIS, int(invoice_number[3:6])
+            if invoice_number.startswith('T'):
+                return InvoiceType.TARCHOPIS, int(invoice_number[1:4])
             return InvoiceType.FAKTURA, int(invoice_number[:3])
 
         def invoice_to_dict(invoice):
