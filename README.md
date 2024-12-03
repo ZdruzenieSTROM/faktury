@@ -3,11 +3,13 @@ Skripty pre rýchle vytváranie faktúr na STROMácke akcie.
 
 ## Návod pre vyplnenie súborov na akciu
 1. Nájdi v priečinku `templates` súbory k typu akcie, na ktorú chceš faktúry vytvoriť.
-2. Vyplň údaje v `.csv` všetky údaje. Ak fakturujeme na osobu, stačí vyplniť to čo uviedli. Ak fakturujeme na firmu treba uviesť všetko aj IČO. Postupuj ako v návode nižšie.
-3. Vyplň nastavenia v `.yaml` súbore. Podľa návodu nižšie.
+2. Vyplň údaje v `.csv` všetky údaje. Ak fakturujeme na osobu, stačí vyplniť to čo uviedli. Ak fakturujeme na firmu treba uviesť všetko aj IČO. Postupuj ako v návode nižšie .Pomenuj ho `nazov_akcieROK.csv` napríklad `lomihlav2024.yaml`
+3. Vyplň nastavenia v `.yaml` súbore. Podľa návodu nižšie. Pomenuj ho `nazov_akcieROK.yaml` napríklad `lomihlav2024.yaml`
 4. Pošli oba súbory na mail osobe, ktorá má povolenie spravovať faktúry.
 
 ### Vyplnenie údajov o odberateľoch (`.csv` súbor)
+
+Ak kopíruješ súbor zo vzoru nechaj v ňom hlavičku (prvý riadok súboru, kde sú názvy stĺpcov)
 
 Popis možných stĺpcov:
  - `o_name` - Meno firmy, školy alebo rodiča, prípadne účastníka (ak už mal 18).
@@ -20,7 +22,7 @@ Popis možných stĺpcov:
  - `o_icdph` - 
  - `o_email` - Email (nepovinné)
  - `ucastnicky` - pocet kusov, kolkokrat danu vec uhradzaju (1)
- - `f_paid` - Suma, ktorá už bola uhradená
+ - `f_paid` - Suma, ktorá už bola uhradená - Vyplniť iba ak už zaplatili. Ak je vyplnené, treba vyplniť aj `i_date_paid`
  - `i_date_paid` - Dátum úhrady. Je potrebné vyplniť iba ak bolo niečo vyplnené v `f_paid`.
  - `f_payment` - Možné hodnoty: `hotovost`,`prevod`,`karta`. Ak nie je uvedené, defaultne sa použije `prevod`
  - `f_original_num` - Ak vystavujeme opravnú faktúru(dobropis/ťarchopis), číslo pôvodnej faktúry, ktorú opravujeme
