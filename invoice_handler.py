@@ -11,7 +11,7 @@ import yaml
 import tqdm
 from multiprocessing import Pool
 from enum import Enum
-
+from pprint import pprint
 from settings import API_KEY, STROM_ID
 
 from pprint import pprint
@@ -226,6 +226,9 @@ class InvoiceSession:
         )
         code = response.json()['code']
         number = response.json()['number']
+        date_paid = info.get('i_date_paid')
+        if code and date_paid:
+            self.mark_invoice_as_paid(code, date_paid)
 
         return InvoiceRecord(
             cislo_faktury=number,
@@ -239,6 +242,17 @@ class InvoiceSession:
             kod_faktury=code,
             datum_uhrady=customer.get('i_date_paid', '')
         )
+
+    def mark_invoice_as_paid(self, code: str, date_paid: str):
+        response = self.__send_request(
+            method='uf',
+            data={
+                'code': code,
+                'date': date_paid
+            }
+        )
+        assert response.status_code == 200
+        return response.json()
 
     def get_invoice_detail(self, code: str):
         response = self.__send_request(
@@ -281,7 +295,8 @@ class InvoiceSession:
                 'Dátum splatnosti': localize_date(invoice['invoice_date_due']),
                 'Predmet': subject,
                 'Suma': invoice['invoice_amount'],
-                'Dátum úhrady': '' if invoice_detail['invoice_paid'] == 'nie' else invoice_detail['invoice_paid']
+                'Dátum úhrady': '' if invoice_detail['invoice_paid'] == 'nie' else localize_date(
+                    invoice_detail['invoice_date_payment'])
             }
 
         response = self.__send_request(
