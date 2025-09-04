@@ -147,7 +147,7 @@ class InvoiceSession:
         if self.debug:
             pprint('Request data')
             pprint(data)
-        return self.session.get(
+        response = self.session.get(
             f'https://www.faktury-online.com/api/{method}',
             params={
                 'data': json.dumps(
@@ -161,6 +161,13 @@ class InvoiceSession:
             },
             verify=True
         )
+        if self.debug:
+            print(
+                f'Request to /{method} returned with status {response.status_code}')
+        if not 200 <= response.status_code < 300:
+            raise ValueError(
+                f'Request to /{method} returned with status {response.status_code}')
+        return response
 
     def download_invoice(self, code):
         return self.__send_request(
